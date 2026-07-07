@@ -287,17 +287,24 @@ export async function startBot(app: import("express").Express): Promise<void> {
   const isProd = process.env["NODE_ENV"] === "production";
 
   if (isProd) {
-    // Webhook URL is built from the public Replit domain
-    const domains = process.env["REPLIT_DOMAINS"] ?? "";
-    const primaryDomain = domains.split(",")[0]?.trim();
+    // Resolve public domain — support Replit and Railway
+    // Railway sets RAILWAY_PUBLIC_DOMAIN; Replit sets REPLIT_DOMAINS (comma-list)
+    const railwayDomain = process.env["RAILWAY_PUBLIC_DOMAIN"];
+    const replitDomains = process.env["REPLIT_DOMAINS"] ?? "";
+    const primaryDomain =
+      railwayDomain ??
+      replitDomains.split(",")[0]?.trim() ??
+      "";
+
     if (!primaryDomain) {
       throw new Error(
-        "REPLIT_DOMAINS is not set — cannot configure webhook in production",
+        "No public domain found. Set RAILWAY_PUBLIC_DOMAIN or REPLIT_DOMAINS.",
       );
     }
+
     const webhookUrl = `https://${primaryDomain}/api/bot/webhook`;
 
-    // Register webhook path on Express BEFORE setting telegraf webhook
+    // Register webhook middleware on Express
     app.use(await bot.createWebhook({ domain: primaryDomain, path: "/api/bot/webhook" }));
 
     logger.info({ webhookUrl }, "Telegram bot started (webhook mode)");

@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+**/dist
+**/.local
+attached_assets
+*.log
+.git
+.env
+artifacts/mockup-sandbox
+scripts
+lib/api-spec
+lib/api-client-react
