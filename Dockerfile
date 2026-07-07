@@ -1,7 +1,8 @@
-FROM node:20-slim AS base
+FROM node:18-alpine AS base
 
-# Install pnpm
-RUN npm install -g pnpm@9
+# Install pnpm via corepack (built into Node.js 18)
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 WORKDIR /app
 
@@ -25,18 +26,17 @@ COPY lib/      ./lib/
 COPY artifacts/api-server/ ./artifacts/api-server/
 COPY tsconfig.base.json ./
 
-# Build lib declarations (needed by api-server typecheck + esbuild)
+# Build lib declarations
 RUN pnpm run typecheck:libs
 
 # Build api-server bundle
 RUN pnpm --filter @workspace/api-server run build
 
-# ── Runtime stage ────────────────────────────────────────────────────────────
-FROM node:20-slim AS runtime
+# ── Runtime stage ─────────────────────────────────────────────────────────────
+FROM node:18-alpine AS runtime
 
 WORKDIR /app
 
-# Copy only the built output and runtime deps
 COPY --from=base /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=base /app/node_modules              ./node_modules
 COPY --from=base /app/artifacts/api-server/node_modules ./artifacts/api-server/node_modules
