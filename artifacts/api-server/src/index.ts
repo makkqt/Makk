@@ -16,14 +16,19 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
+// Start Telegram bot (webhook in prod, long polling in dev)
+// Must be called before app.listen so webhook middleware is registered first
+startBot(app)
+  .then(() => {
+    app.listen(port, (err) => {
+      if (err) {
+        logger.error({ err }, "Error listening on port");
+        process.exit(1);
+      }
+      logger.info({ port }, "Server listening");
+    });
+  })
+  .catch((err) => {
+    logger.error({ err }, "Failed to start bot");
     process.exit(1);
-  }
-
-  logger.info({ port }, "Server listening");
-});
-
-// Start Telegram bot
-startBot();
+  });

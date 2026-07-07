@@ -278,9 +278,34 @@ bot.command("checkdevice", async (ctx) => {
   }
 });
 
-export function startBot(): void {
-  bot.launch({ dropPendingUpdates: true });
-  logger.info("Telegram bot started (long polling)");
+/**
+ * Start the bot.
+ * - Production: webhook mode (Telegram POSTs updates to /api/bot/webhook)
+ * - Development: long polling (no public URL required)
+ */
+export async function startBot(app: import("express").Express): Promise<void> {
+  const isProd = process.env["NODE_ENV"] === "production";
+
+  if (isProd) {
+    // Webhook URL is built from the public Replit domain
+    const domains = process.env["REPLIT_DOMAINS"] ?? "";
+    const primaryDomain = domains.split(",")[0]?.trim();
+    if (!primaryDomain) {
+      throw new Error(
+        "REPLIT_DOMAINS is not set — cannot configure webhook in production",
+      );
+    }
+    const webhookUrl = `https://${primaryDomain}/api/bot/webhook`;
+
+    // Register webhook path on Express BEFORE setting telegraf webhook
+    app.use(await bot.createWebhook({ domain: primaryDomain, path: "/api/bot/webhook" }));
+
+    logger.info({ webhookUrl }, "Telegram bot started (webhook mode)");
+  } else {
+    // Development: use long polling
+    bot.launch({ dropPendingUpdates: true });
+    logger.info("Telegram bot started (long polling)");
+  }
 
   process.once("SIGINT", () => bot.stop("SIGINT"));
   process.once("SIGTERM", () => bot.stop("SIGTERM"));
