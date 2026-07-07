@@ -1,8 +1,7 @@
-# syntax=docker/dockerfile:1
-FROM node:24-alpine AS base
+FROM node:20-slim AS base
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9
 
 WORKDIR /app
 
@@ -33,7 +32,7 @@ RUN pnpm run typecheck:libs
 RUN pnpm --filter @workspace/api-server run build
 
 # ── Runtime stage ────────────────────────────────────────────────────────────
-FROM node:24-alpine AS runtime
+FROM node:20-slim AS runtime
 
 WORKDIR /app
 
